@@ -68,7 +68,7 @@ $TCA['tx_generaldatadisplay_datafields'] = array (
 );
 
 
-t3lib_div::loadTCA('tt_content');
+# t3lib_div::loadTCA('tt_content');
 $TCA['tt_content']['types']['list']['subtypes_excludelist'][$_EXTKEY.'_pi1']='layout,select_key,pages';
 
 # add pi_flexform to be renderd when the plugin is shown
