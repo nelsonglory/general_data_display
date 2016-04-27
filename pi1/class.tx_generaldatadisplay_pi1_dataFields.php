@@ -110,7 +110,7 @@ abstract class tx_generaldatadisplay_pi1_dataFields extends tslib_pibase
 
 	public static function getTypes()
 		{
-		t3lib_div::loadTCA(self::$table);
+		# t3lib_div::loadTCA(self::$table);
 		$items = $GLOBALS['TCA'][self::$table]['columns']['datafield_type']['config']['items'];
 		foreach ($items as $item => $arr) $typeArr[$arr[1]] = $arr[1];
 
