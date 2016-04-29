@@ -1186,7 +1186,10 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 					{
 					if ($mapData['dataFields']['init'][$mappingHash[$key]])
 						{
-						$objVars->setValue($mapData['dataFields']['init'][$mappingHash[$key]], $value);
+						// replace \r with \n to import linbreaks correctly
+						$value = preg_replace('/\r/',"\n",$value);
+						// remove all html tags
+						$objVars->setValue($mapData['dataFields']['init'][$mappingHash[$key]], strip_tags(htmlspecialchars_decode($value, ENT_QUOTES),$value));
 						}
 					}
 				
@@ -1287,7 +1290,7 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 			foreach($objArr as $id => $obj)
 				{
 				foreach ($headerData as $key) 
-					$row[$key] = $obj->getObjVar($key, TRUE);
+					$row[$key] = strip_tags($obj->getObjVar($key, TRUE));
 
 				$exportData[]= $row;
 				}
@@ -1434,7 +1437,7 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 		if ($class) $table = $this->wrapInTag($table, $class);
 		return $table;
 		}
-
+		
 	public function formatContentType(tx_generaldatadisplay_pi1_dataStructs $obj=NULL, $content='', $type='')
 		{
 		if ($obj)
@@ -1560,7 +1563,6 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 				}
 			break;
 			}
-
 		return $content;
 		}
 
