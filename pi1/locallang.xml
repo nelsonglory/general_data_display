@@ -29,6 +29,9 @@
 			<label index="import_category_field">Category field</label>
 			<label index="import_categories">Import categories</label>
 			<label index="import_from_row">Import from row</label>
+			<label index="import_uther_functions">Other functions</label>
+			<label index="save_mapping">Save mapping</label>
+			<label index="load_mapping">Load mapping</label>
 			<label index="export_data">CSV export</label>
 			<label index="fieldname">Fieldname</label>
 			<label index="type">Fieldtype</label>
@@ -143,6 +146,9 @@
 			<label index="import_category_field">Kategorie Feld</label>
 			<label index="import_categories">Kategorien importieren</label>
 			<label index="import_from_row">Import ab Zeile</label>
+			<label index="import_other_functions">Weitere Funktionen</label>
+			<label index="save_mapping">Mapping speichern</label>
+			<label index="load_mapping">Mapping einlesen</label>
 			<label index="export_data">CSV Export</label>
 			<label index="fieldname">Feldname</label>
 			<label index="type">Feldtyp</label>

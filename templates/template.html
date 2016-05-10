@@ -412,8 +412,8 @@
 	<label>###HEADING_READ_CSVFILE###</label>
 	<input type="hidden" name="###PI_BASE###[action]" value="import" />
 	<label>###HEADING_FILENAME###</label>
-	<input name="###PI_BASE###[importfile]" type="file" size="20">
 	<input type="submit" name="###PI_BASE###[submit_import_data]" value="einlesen" />
+	<input name="###PI_BASE###[importfile]" type="file" size="20">
 	<label>###HEADING_DATA_DELIMITER###</label>
 	<select name="###PI_BASE###[import_data_delimiter]">
 		<option>;</option>
@@ -478,12 +478,19 @@
 			<input name="###PI_BASE###[import_startfrom]" type="text" size="1" maxlength="4" value="1" />
 		</td>
 		</tr>
+		<tr><td><label>###HEADING_IMPORT_OTHER_FUNCTIONS###</label></td></tr>
 		<tr>
-		<td>
-			<br /><input type="submit" name="###PI_BASE###[submit_import]" value="###IMPORT###" />
+		<td colspan="3">
+			<input type="submit" name="###PI_BASE###[save_mapping]" value="###SAVE_MAPPING###" />
+			<input type="submit" name="###PI_BASE###[submit_mapping]" value="###LOAD_MAPPING###" />
+			<input name="###PI_BASE###[mappingfile]" type="file" size="20">
 		</td>
 		</tr>
 	</table>
+	</div>
+	<div>
+		<input type="submit" name="###PI_BASE###[submit_import]" value="###IMPORT###" />
+		<input type="submit" name="###PI_BASE###[reset_import]" value="###RESET###" />
 	</div>
 </form>
 </div>
