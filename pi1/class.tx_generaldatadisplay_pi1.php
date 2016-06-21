@@ -1053,7 +1053,7 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 		// is file submitted ?
 		if ($this->secPiVars->get('submit_import_data') && $_FILES[PREFIX_ID]['tmp_name']['importfile']) {
 			// return error if file has wrong mime type
-			if (!preg_match('/^text/', $_FILES[PREFIX_ID]['type']['importfile'])) {
+			if (!preg_match('/(text|csv)/', $_FILES[PREFIX_ID]['type']['importfile'])) {
 				return $this->showError('error_fileMimeType');
 			}
 			
