@@ -544,20 +544,20 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 				// no initial data display ?
 				if ($this->conf['initialNoResults'] == 1 && !$this->secPiVars->get('action') && !$this->secPiVars->get('back') && !$this->secPiVars->get('selected_letter') && $this->secPiVars->get('offset') == '') {
 					// use template subpart
-					$subpart = $this->cObj->getSubpart(TEMPLATE, '###SEARCHONLY###');
-					return $this->cObj->substituteMarkerArrayCached($subpart, $contentArray);
+					$subpart['searchonly'] = $this->cObj->getSubpart(TEMPLATE, '###SEARCHONLY###');
+					return $this->cObj->substituteMarkerArrayCached($subpart['searchonly'], $contentArray);
 				}
 				
 				// use template subpart
-				$subpart    = $this->cObj->getSubpart(TEMPLATE, '###LIST-DATAVIEW###');
-				$subsubpart = $this->cObj->getSubpart(TEMPLATE, '###LIST-DATA###');
+				$subpart['list-dataview'] = $this->cObj->getSubpart(TEMPLATE, '###LIST-DATAVIEW###');
+				$subpart['list-data'] = $this->cObj->getSubpart(TEMPLATE, '###LIST-DATA###');
+				$subpart['list-dataset'] = $this->cObj->getSubpart(TEMPLATE, '###LIST-DATASET###');
 				
 				// instantiate datalist
 				$dataList = t3lib_div::makeInstance(PREFIX_ID . '_dataList');
 				
 				$objArr    = $dataList->getDS($this->searchClause, '', TRUE);
 				$nrResults = $dataList->getProperty('nrResults');
-				
 				$contentArray['###HITS###'] = '(' . $nrResults . ' ' . $this->getLL('hits') . ')';
 				
 				// defined display limit ?
@@ -631,32 +631,41 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 				// build result list
 				foreach ($objArr as $key => $obj) {
 					$dataCategory = $catObjArr[$obj->getObjVar('data_category')] ? $obj->getObjVar('data_category') : 0;
-					$orderedList[$dataCategory] .= $this->wrapInTag($this->pi_linkTP_keepPIvars($obj->getObjVar('data_title'), array(
-						'uid' => $key,
-						'view' => '2',
-						'type' => 'data'
-					), '1', '1', DETAIL_PID), __FUNCTION__ . '-title');
+					$orderedList[$dataCategory][] = $obj;
+					
 					// set all progenitors if nescessary
 					foreach ($categoryList->getAllProgenitors($dataCategory) as $catProgenitor)
 						$progenitorList[$catProgenitor] = 1;
 				}
-				
 				// go through categorySortHash and fill template
 				foreach (array_keys($categorySortHash) as $dataCategory) {
 					if ($orderedList[$dataCategory] || $progenitorList[$dataCategory]) {
 						$contentArray['###CATEGORY-NAME###'] = $this->wrapInTag($catObjArr[$dataCategory] ? $catObjArr[$dataCategory]->getObjVar('category_name') : $this->getLL('no_category'), __FUNCTION__ . '-category-name');
-						$contentArray['###DATA-TITLE###']    = $orderedList[$dataCategory];
-						$contentArray['###LISTDATA###'] .= $this->wrapInTag($this->cObj->substituteMarkerArrayCached($subsubpart, $contentArray), __FUNCTION__ . '-categorylvl' . ($catObjArr[$dataCategory] ? $catObjArr[$dataCategory]->getObjVar('level') : 0));
+						// create template array for linklist
+						$contentArray['###DATASET###'] = '';
+						foreach($orderedList[$dataCategory] as $obj) {
+                            // t3lib_utility_Debug::debug($obj, 'obj');
+                            foreach($obj->getObjKeys() as $itemName) {
+                                if ($itemName == 'data_title') {
+                                    $contentArray['###DATA_TITLE###'] = $this->wrapInTag($this->pi_linkTP_keepPIvars($obj->getObjVar('data_title'), array(
+                                        'uid' => $obj->getObjVar('uid'),
+                                        'view' => '2',
+                                        'type' => 'data'
+                                    ), '1', '1', DETAIL_PID), __FUNCTION__ . '-title', 'span');
+                                } else $contentArray['###'.strtoupper($itemName).'###'] = $this->wrapInTag($obj->getObjVar($itemName),__FUNCTION__ . '-item', 'span');
+                            }
+                            $contentArray['###DATASET###'] .= $this->wrapInTag($this->cObj->substituteMarkerArrayCached($subpart['list-dataset'], $contentArray),__FUNCTION__ . '-data');
+						}
+						$contentArray['###LISTDATA###'] .= $this->wrapInTag($this->cObj->substituteMarkerArrayCached($subpart['list-data'], $contentArray), __FUNCTION__ . '-categorylvl' . ($catObjArr[$dataCategory] ? $catObjArr[$dataCategory]->getObjVar('level') : 0));
 					}
 				}
-				
 				if (!$contentArray['###LISTDATA###']) {
 					$contentArray['###CATEGORY-NAME###'] = '';
 					$contentArray['###LISTDATA###']      = $this->getLL('no_data');
 				}
 				$contentArrayCSS = $this->wrapTemplateArrayInClass($contentArray, __FUNCTION__);
 				$contentAll      = array_merge($contentArrayCSS, $commonsArray);
-				$content         = $this->cObj->substituteMarkerArrayCached($subpart, $contentAll);
+				$content         = $this->cObj->substituteMarkerArrayCached($subpart['list-dataview'], $contentAll);
 			}
 				break;
 		}

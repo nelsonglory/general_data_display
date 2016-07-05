@@ -65,6 +65,10 @@ abstract class tx_generaldatadisplay_pi1_dataStructs {
 		return $this->objVars->setValue($key, $value);
 	}
 	
+	public function getObjKeys() {
+		return $this->objVars->getKeys();
+	}
+	
 	protected function cleanedObjVars($checkpiVars = TRUE) {
 		// unset FALSE fields
 		foreach ($this->objVars->get("", TRUE) as $key => $value) {

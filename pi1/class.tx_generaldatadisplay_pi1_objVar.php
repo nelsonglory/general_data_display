@@ -55,6 +55,11 @@ class tx_generaldatadisplay_pi1_objVar {
 		return $plain ? $item : self::specialchars($item);
 	}
 	
+	public function getKeys() {
+        if (is_array($this->data))
+            return is_array($this->data) ? array_keys($this->data) : array();
+	}
+	
 	public function delKey($key) {
 		if (is_array($this->data))
 			unset($this->data[$key]);
