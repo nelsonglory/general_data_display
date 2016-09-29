@@ -196,6 +196,21 @@
 	padding-left: 0.3em;
 }
 
+.tx-generaldatadisplay-pi1 .listView-adminstuff img{
+	vertical-align: top;
+	margin-left: 16px;
+	margin-right: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+.tx-generaldatadisplay-pi1 .listView-adminstuff{
+	margin-bottom: 0.3em;
+	padding: 0.1em;
+	text-align: center;
+	background: #F0E68C;
+}
+
 .tx-generaldatadisplay-pi1 .tableView table {
 	margin-top: 2px;
 	font-size: 1em;

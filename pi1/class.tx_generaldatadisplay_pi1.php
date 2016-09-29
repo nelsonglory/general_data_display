@@ -644,15 +644,20 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 						// create template array for linklist
 						$contentArray['###DATASET###'] = '';
 						foreach($orderedList[$dataCategory] as $obj) {
-                            // t3lib_utility_Debug::debug($obj, 'obj');
                             foreach($obj->getObjKeys() as $itemName) {
-                                if ($itemName == 'data_title') {
-                                    $contentArray['###DATA_TITLE###'] = $this->wrapInTag($this->pi_linkTP_keepPIvars($obj->getObjVar('data_title'), array(
+                                $contentArray['###ADMINSTUFF###']    = $obj->havePerm() ? $this->wrapInTag($this->makeAdminStuff($obj->getObjVar('uid')),__FUNCTION__ . '-adminstuff') : '';
+                                if ($itemName == 'data_title' && !$this->getConfigValue('rawDataTitle', 'bool', FALSE)) {
+                                    $contentArray['###DATA_TITLE###'] =  $this->wrapInTag($this->pi_linkTP_keepPIvars($obj->getObjVar('data_title'), array(
                                         'uid' => $obj->getObjVar('uid'),
                                         'view' => '2',
                                         'type' => 'data'
-                                    ), '1', '1', DETAIL_PID), __FUNCTION__ . '-title', 'span');
-                                } else $contentArray['###'.strtoupper($itemName).'###'] = $this->wrapInTag($obj->getObjVar($itemName),__FUNCTION__ . '-item', 'span');
+                                        ), '1', '1', DETAIL_PID), __FUNCTION__ . '-title', 'span'); 
+                                } elseif ($itemName != 'uid' && $itemName != 'pid') {
+                                    $contentArray['###'.mb_strtoupper($itemName,'UTF-8').'###'] = $this->wrapInTag($obj->getObjVar($itemName,TRUE),__FUNCTION__ . '-item', 'span');
+                                } else {
+                                    // without css
+                                    $contentArray['###'.mb_strtoupper($itemName,'UTF-8').'###'] = $obj->getObjVar($itemName);
+                                }
                             }
                             $contentArray['###DATASET###'] .= $this->wrapInTag($this->cObj->substituteMarkerArrayCached($subpart['list-dataset'], $contentArray),__FUNCTION__ . '-data');
 						}
@@ -724,9 +729,9 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 						$error     = tx_generaldatadisplay_pi1_formData::checkValue($value, 'notEmpty');
 						
 						if (!$error['notEmpty'] && $metadata['content_visible'] != 'no') {
-							// standard template uses Detaildata - but you can also use your own template & "real" names
-							$contentArray['###HEADING_' . strtoupper($fieldName) . '###'] = $this->wrapInTag($fieldName, __FUNCTION__ . '-dataHeading');
-							$contentArray['###' . strtoupper($key) . '###']               = $this->wrapInTag($this->getLL($value) ? $this->getLL($value) : $value, __FUNCTION__ . '-dataContent');
+							// standard template uses detaildata - but you can also use your own template & "real" names
+							$contentArray['###HEADING_' . mb_strtoupper($fieldName,'UTF-8') . '###'] = $this->wrapInTag($fieldName, __FUNCTION__ . '-dataHeading');
+							$contentArray['###' . mb_strtoupper($key,'UTF-8') . '###']               = $this->wrapInTag($this->getLL($value) ? $this->getLL($value) : $value, __FUNCTION__ . '-dataContent');
 							$contentArray['###HEADING_DATACONTENT###']                    = $this->wrapInTag($fieldName, __FUNCTION__ . '-dataHeading');
 							$contentArray['###DATACONTENT###']                            = $this->wrapInTag($this->formatContentType($obj), __FUNCTION__ . '-dataContent');
 							$contentArray['###DETAILDATA###'] .= $this->cObj->substituteMarkerArrayCached($subsubpart, $contentArray);
@@ -771,8 +776,8 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 		foreach ($formError as $key => $hash) {
 			foreach ($hash as $check => $value) {
 				if ($value) {
-					$contentArray['###' . strtoupper($key) . '_ERROR###'] .= $this->wrapInTag($this->getLL('error_' . $value), __FUNCTION__ . '-formError');
-					$contentArray['###' . strtoupper($key) . '_ERRORCLASS###'] = 'class="formError"';
+					$contentArray['###' . mb_strtoupper($key,'UTF-8') . '_ERROR###'] .= $this->wrapInTag($this->getLL('error_' . $value), __FUNCTION__ . '-formError');
+					$contentArray['###' . mb_strtoupper($key,'UTF-8') . '_ERRORCLASS###'] = 'class="formError"';
 				}
 			}
 		}
