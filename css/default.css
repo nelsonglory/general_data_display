@@ -197,11 +197,10 @@
 }
 
 .tx-generaldatadisplay-pi1 .listView-adminstuff img{
-	vertical-align: top;
-	margin-left: 16px;
+	vertical-align: middle;
 	margin-right: 16px;
-	width: 16px;
-	height: 16px;
+	width: 1em;
+	height: 1em;
 }
 
 .tx-generaldatadisplay-pi1 .listView-adminstuff{
@@ -231,7 +230,6 @@
 	width: 16px;
 	height: 16px;
 }
-
 
 .tx-generaldatadisplay-pi1 .tableView-admincreate {
 	text-align: right;
