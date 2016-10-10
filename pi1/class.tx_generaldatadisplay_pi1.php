@@ -1791,6 +1791,10 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 						'action' => 'import'
 					), '1', '1');
 			}
+			$adminMenu[] = $this->pi_linkTP_keepPIvars('<img src="' . PICTURE_PATH . 'link.png" title="' . $this->getLL('link2page') . '" alt="[' . $this->getLL('link2page') . ']" />', array(
+                'submit' => '',
+                'search_reset' => '',
+			), '1', '0');
 			
 			$contentArray['###ADMIN_MENU###'] = implode(' | ', $adminMenu);
 			

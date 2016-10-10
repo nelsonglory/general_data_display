@@ -16,6 +16,7 @@
 			<label index="subcategory">Subcategory of</label>
 			<label index="datafield">Datafield</label>
 			<label index="datafields">Datafields</label>
+            <label index="link2page">Link to this page</label>
 			<label index="filename">File name</label>
 			<label index="preview">Preview</label>
 			<label index="import">Import</label>
@@ -133,6 +134,7 @@
 			<label index="subcategory">Unterkategorie von</label>
 			<label index="datafield">Datenfeld</label>
 			<label index="datafields">Datenfelder</label>
+            <label index="link2page">Link zu dieser Seite</label>
 			<label index="filename">Dateiname</label>
 			<label index="preview">Vorschau</label>
 			<label index="import">Import</label>
