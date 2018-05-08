@@ -157,12 +157,11 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 			$this->secPiVars->setValue('selected_item', $scopeArr->get('selected_item'));
 			$this->secPiVars->setValue('searchphrase', $scopeArr->get('searchphrase'));
 			$this->secPiVars->setValue('selected_category', $scopeArr->get('selected_category'));
+            if ($this->secPiVars->get('offset') == NULL)
+                $this->secPiVars->setValue('offset', $scopeArr->get('offset'));
+            if ($this->secPiVars->get('selected_letter') == NULL)
+                $this->secPiVars->setValue('selected_letter', $scopeArr->get('selected_letter'));
 		}
-		if ($this->secPiVars->get('offset') == NULL)
-			$this->secPiVars->setValue('offset', $scopeArr->get('offset'));
-		if ($this->secPiVars->get('selected_letter') == NULL)
-			$this->secPiVars->setValue('selected_letter', $scopeArr->get('selected_letter'));
-		
 		// set scopeArray
 		$scopeArr->setValue('selected_item', $this->secPiVars->get('selected_item'));
 		$scopeArr->setValue('selected_category', $this->secPiVars->get('selected_category'));
@@ -281,17 +280,31 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 					} else
 						$content = $this->editView($formData);
 				} else {
-					if ($this->secPiVars->get('uid')) // existing DS
-						{
+                    // existing DS
+					if ($this->secPiVars->get('uid')) {
 						// instantiate data list
 						$dataSet   = t3lib_div::makeInstance(PREFIX_ID . '_' . $this->secPiVars->get('type') . 'List');
 						// instantiate an set clauseObj
 						$clauseObj = t3lib_div::makeInstance(PREFIX_ID . '_objClause');
 						$clauseObj->addAND('uid', $this->secPiVars->get('uid'), '=');
+                        
 						$objArr = $dataSet->getDS($clauseObj);
 						
-						if ($dataSet->getProperty('nrResults'))
-							$formData->importValues($objArr[$this->secPiVars->get('uid')]->getProperty('objVars'), $this->secPiVars);
+						if  ($this->secPiVars->get('type') == 'data') {
+                            // create one result obj from data obj
+                            $obj = $objArr[0] ? $objArr[0] : null;
+                        
+                            foreach($objArr as $item) {
+                                $catArr[] = $item->getObjVar('data_category');
+                            }
+                            // set category
+                            $obj->setObjVar('data_category', implode(',',$catArr));
+                        } else {
+                            // just a single obj
+                            $obj = array_pop($objArr);
+						}
+						if (is_object($obj))
+							$formData->importValues($obj->getProperty('objVars'), $this->secPiVars);
 					} else {
 						// new dataset
 						$formData->importValues($this->secPiVars);
@@ -357,17 +370,10 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 			
 			case 'delete': {
 				if ($this->secPiVars->get('uid')) {
-					$dataSet   = t3lib_div::makeInstance(PREFIX_ID . '_' . $this->secPiVars->get('type') . 'List');
-					// instantiate an set clauseObj
-					$clauseObj = t3lib_div::makeInstance(PREFIX_ID . '_objClause');
-					$clauseObj->addAND('uid', $this->secPiVars->get('uid'), '=');
-					$objArr = $dataSet->getDS($clauseObj);
-					
-					if ($dataSet->getProperty('nrResults')) {
-						$obj     = $objArr[$this->secPiVars->get('uid')];
-						$content = $obj->deleteDS() ? $this->view() : $this->showError('dberror_permission');
-					} else
-						$content = $this->showError('dberror_no_dataset');
+                    $dataSet   = t3lib_div::makeInstance(PREFIX_ID . '_' . $this->secPiVars->get('type'));
+                    $dataSet->setProperty('uid',$this->secPiVars->get('uid'));
+                    
+                    $content = $dataSet->deleteDS() ? $this->view() : $this->showError('dberror_permission');
 				} else
 					$content = $this->showError('error_missing_uid');
 			}
@@ -599,70 +605,56 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 						), '1', '1'), __FUNCTION__ . '-pageLink', '');
 				} else
 					$contentArray['###PAGELINKS###'] = '';
-				
-				// get list of all categories
+
+                // build result list
+                // get list of all categories
 				$categoryList = t3lib_div::makeInstance(PREFIX_ID . '_categoryList');
-				$catObjArr    = $categoryList->getDS();
-				
-				// get a list of all used categories and progenitors of this view
-				$category = array();
-				foreach ($objArr as $key => $obj) {
-					$dataCategory            = $obj->getObjVar('data_category');
-					$category[$dataCategory] = 1;
-					$catProgenitors          = $categoryList->getAllProgenitors($dataCategory);
-					foreach ($catProgenitors as $catProgenitor)
-						$category[$catProgenitor] = 1;
-				}
-				
-				$categorySortHash[0] = 0; // no category 				
-				
-				// build sortHash
-				foreach (array_keys($category) as $key) {
-					$categoryRanking[$key] = $categorySortHash[$key] = ++$inc;
-				}
-				
-				foreach (array_keys($category) as $key) {
-					$catProgenitors = $categoryList->getAllProgenitors($key);
-					foreach ($catProgenitors as $catProgenitor)
-						$categorySortHash[$key] = $categoryRanking[$catProgenitor] . $categorySortHash[$key];
-				}
-				asort($categorySortHash, SORT_STRING);
-				
-				// build result list
-				foreach ($objArr as $key => $obj) {
-					$dataCategory = $catObjArr[$obj->getObjVar('data_category')] ? $obj->getObjVar('data_category') : 0;
-					$orderedList[$dataCategory][] = $obj;
-					
-					// set all progenitors if nescessary
-					foreach ($categoryList->getAllProgenitors($dataCategory) as $catProgenitor)
-						$progenitorList[$catProgenitor] = 1;
-				}
-				// go through categorySortHash and fill template
-				foreach (array_keys($categorySortHash) as $dataCategory) {
-					if ($orderedList[$dataCategory] || $progenitorList[$dataCategory]) {
-						$contentArray['###CATEGORY-NAME###'] = $this->wrapInTag($catObjArr[$dataCategory] ? $catObjArr[$dataCategory]->getObjVar('category_name') : $this->getLL('no_category'), __FUNCTION__ . '-category-name');
-						// create template array for linklist
-						$contentArray['###DATASET###'] = '';
-						foreach($orderedList[$dataCategory] as $obj) {
-                            foreach($obj->getObjKeys() as $itemName) {
-                                $contentArray['###ADMINSTUFF###']    = $obj->havePerm() ? $this->wrapInTag($this->makeAdminStuff($obj->getObjVar('uid')),__FUNCTION__ . '-adminstuff') : '';
-                                if ($itemName == 'data_title' && !$this->getConfigValue('rawDataTitle', 'bool', FALSE)) {
-                                    $contentArray['###DATA_TITLE###'] =  $this->wrapInTag($this->pi_linkTP_keepPIvars($obj->getObjVar('data_title'), array(
-                                        'uid' => $obj->getObjVar('uid'),
-                                        'view' => '2',
-                                        'type' => 'data'
-                                        ), '1', '1', DETAIL_PID), __FUNCTION__ . '-title', 'span'); 
-                                } elseif ($itemName != 'uid' && $itemName != 'pid') {
-                                    $contentArray['###'.mb_strtoupper($itemName,'UTF-8').'###'] = $this->wrapInTag($obj->getObjVar($itemName,TRUE),__FUNCTION__ . '-item', 'span');
-                                } else {
-                                    // without css
-                                    $contentArray['###'.mb_strtoupper($itemName,'UTF-8').'###'] = $obj->getObjVar($itemName);
-                                }
+                $catArr = $categoryList->getDS();
+                
+                $currCat = array();
+                
+				foreach ($objArr as $obj) {
+                    // create template array for linklist
+                    $contentArray['###DATASET###'] = '';
+                    $progenitorArr = $categoryList->getAllProgenitors($obj->getObjVar('data_category'));
+                    
+                    // new category ?
+                    if ($currCat[$obj->getObjVar('data_category')]) {
+                        $contentArray['###CATEGORY-NAME###'] = '';
+                    } else {
+                        // create progenitors if necessary
+                        while($progenitorArr) {
+                            $progenitor = array_pop($progenitorArr);
+                            if (!$currCat[$progenitor]) {
+                                $contentArray['###CATEGORY-NAME###'] = $this->wrapInTag($catArr[$progenitor]->getObjVar('category_name'), __FUNCTION__ . '-category-name');
+                                $contentArray['###LISTDATA###'] .= $this->wrapInTag($this->cObj->substituteMarkerArrayCached($subpart['list-data'], $contentArray), __FUNCTION__ . '-categorylvl' . (isset ($catArr[$progenitor]) ? $catArr[$progenitor]->getObjVar('level') : 0));
+                                $currCat[$progenitor] = 1;
                             }
-                            $contentArray['###DATASET###'] .= $this->wrapInTag($this->cObj->substituteMarkerArrayCached($subpart['list-dataset'], $contentArray),__FUNCTION__ . '-data');
-						}
-						$contentArray['###LISTDATA###'] .= $this->wrapInTag($this->cObj->substituteMarkerArrayCached($subpart['list-data'], $contentArray), __FUNCTION__ . '-categorylvl' . ($catObjArr[$dataCategory] ? $catObjArr[$dataCategory]->getObjVar('level') : 0));
-					}
+                        }
+                        $contentArray['###CATEGORY-NAME###'] = $this->wrapInTag($obj->getObjVar('category_name') ? $obj->getObjVar('category_name') : $this->getLL('no_category'), __FUNCTION__ . '-category-name');
+                        $currCat[$obj->getObjVar('data_category')] = 1;
+                    }
+                    
+                    // create all datafields in marker array
+                    foreach($obj->getObjKeys() as $itemName) {
+                        if ($itemName == 'data_title' && !$this->getConfigValue('rawDataTitle', 'bool', FALSE)) {
+                            $contentArray['###DATA_TITLE###'] =  $this->wrapInTag($this->pi_linkTP_keepPIvars($obj->getObjVar('data_title'), array(
+                                'uid' => $obj->getObjVar('uid'),
+                                'view' => '2',
+                                'type' => 'data'
+                            ), '1', '1', DETAIL_PID), __FUNCTION__ . '-title', 'span'); 
+                        } elseif ($itemName != 'uid' && $itemName != 'pid') {
+                            $contentArray['###'.mb_strtoupper($itemName,'UTF-8').'###'] = $this->wrapInTag($obj->getObjVar($itemName,TRUE),__FUNCTION__ . '-item', 'span');
+                        } else {
+                            // without css
+                            $contentArray['###'.mb_strtoupper($itemName,'UTF-8').'###'] = $obj->getObjVar($itemName);
+                        }
+                    }
+                        
+                    $contentArray['###ADMINSTUFF###']    = $obj->havePerm() ? $this->wrapInTag($this->makeAdminStuff($obj->getObjVar('uid')),__FUNCTION__ . '-adminstuff') : '';
+                    $contentArray['###DATASET###'] .= $this->wrapInTag($this->cObj->substituteMarkerArrayCached($subpart['list-dataset'], $contentArray),__FUNCTION__ . '-data');
+                    
+                    $contentArray['###LISTDATA###'] .= $this->wrapInTag($this->cObj->substituteMarkerArrayCached($subpart['list-data'], $contentArray), __FUNCTION__ . '-categorylvl' . (isset($catArr[$obj->getObjVar('data_category')]) ? $catArr[$obj->getObjVar('data_category')]->getObjVar('level') : 0));
 				}
 				if (!$contentArray['###LISTDATA###']) {
 					$contentArray['###CATEGORY-NAME###'] = '';
@@ -680,7 +672,7 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 	private function singleView($uid, $type = 'data') {
 		if (!$uid)
 			return $this->showError('error_missing_uid');
-		
+
 		// commons
 		$commonsArray     = $this->makeCommonsArray();
 		$headingsArrayCSS = $this->wrapTemplateArrayInClass($this->makeHeadingsArray(), __FUNCTION__);
@@ -699,16 +691,30 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 				// instantiate and set clauseObj
 				$clauseObj = t3lib_div::makeInstance(PREFIX_ID . '_objClause');
 				$clauseObj->addAND('uid', $uid, '=');
+				// multible categories result in multible objects
 				$objArr = $dataList->getDS($clauseObj);
+				// create one result obj
+				$obj = $objArr[0] ? $objArr[0] : null;
+				foreach($objArr as $item) {
+                    $catArr[] = $item->getObjVar('data_category');
+				}
+				// set category
+				$obj->setObjVar('data_category', implode(',',$catArr));
 				
 				// get list of all categories
 				$categoryList = t3lib_div::makeInstance(PREFIX_ID . '_categoryList');
 				$catObjArr    = $categoryList->getDS();
 				
-				if ($objArr[$uid]) {
-					$objVars                             = $objArr[$uid]->getProperty('objVars');
-					$contentArray['###ADMINSTUFF###']    = $objArr[$uid]->havePerm() ? $this->makeAdminStuff($uid) : '';
-					$contentArray['###CATEGORY-NAME###'] = is_object($catObjArr[$objVars->get('data_category')]) ? $catObjArr[$objVars->get('data_category')]->getObjVar('category_name') : '';
+				if ($obj) {
+					$objVars                             = $obj->getProperty('objVars');
+					$contentArray['###ADMINSTUFF###']    = $obj->havePerm() ? $this->makeAdminStuff($uid) : '';
+					// retrieve all category names
+					$categoryNameArr = array();
+					$dataCategories = explode(',',$objVars->get('data_category'));
+					foreach($dataCategories as $dataCategory) {
+                        if (is_object($catObjArr[$dataCategory])) $categoryNameArr[] = $catObjArr[$dataCategory]->getObjVar('category_name');
+					}
+					$contentArray['###CATEGORY-NAME###'] = implode(' | ',$categoryNameArr);
 					$contentArray['###DATA_TITLE###']    = $objVars->get('data_title');
 					$contentArray['###DETAILDATA###']    = '';
 					
@@ -795,8 +801,7 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 				
 				$categoryList = $datafieldList = t3lib_div::makeInstance(PREFIX_ID . '_categoryList');
 				$categoryList->getDS();
-				$categoryOptions                             = $categoryList->getOptionSelect('category_name', $formData->getFormValue('data_category'));
-				$contentArray['###DATA_CATEGORY_OPTIONS###'] = '<option value="">' . $this->getLL('empty_category') . '</option>' . $categoryOptions;
+				$contentArray['###DATA_CATEGORY_OPTIONS###'] = $categoryList->getOptionSelect('category_name', $formData->getFormValue('data_category'), TRUE, FALSE);
 				
 				if (!$objArr)
 					$contentArray['###INPUT_DATAFIELDS###'] = $this->getLL('no_datafields');
@@ -904,7 +909,7 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 				// build subcategories option select
 				$categoryList = $datafieldList = t3lib_div::makeInstance(PREFIX_ID . '_categoryList');
 				$categoryList->getDS($restrictClause);
-				$contentArray['###DATA_SUBCATEGORY_OPTIONS###'] = '<option value="0"></option>' . $categoryList->getOptionSelect('category_name', $formData->getFormValue('category_progenitor'), FALSE, 'uid');
+				$contentArray['###DATA_SUBCATEGORY_OPTIONS###'] = '<option value="0"></option>' . $categoryList->getOptionSelect('category_name', $formData->getFormValue('category_progenitor'));
 			}
 				break;
 			
@@ -1013,6 +1018,7 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 			case 'data': {
 				$details                     = '###DELETE_REQUEST_DETAILS_DATA###';
 				$contentArray['###TITLE###'] = $objVars->get('data_title');
+				$contentArray['###DATAROWS###'] ='';
 				
 				// get dataContent
 				$dataContentList = t3lib_div::makeInstance(PREFIX_ID . '_datacontentList');
@@ -1023,7 +1029,7 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 				
 				// get data subpart
 				$dataSub = $this->cObj->getSubpart(TEMPLATE, '###DELETE_REQUEST_DETAILS_DATAROW###');
-				
+
 				foreach ($dataContentObjArr as $key => $obj) {
 					$contentDataArr['###HEADING_DATA_CONTENT###'] = $this->wrapInTag($obj->getObjVar('datafield_name'), __FUNCTION__ . '-dataHeading');
 					$contentDataArr['###DATA_CONTENT###']         = $this->formatContentType($obj);
@@ -1657,7 +1663,7 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 		$commonsArray['###PI_BASE###']      = PREFIX_ID;
 		$commonsArray['###PLUGINNAME###']   = $this->pi_getClassName('');
 		$commonsArray['###ACTION_URL###']   = $this->pi_getPageLink(LIST_PID);
-		$commonsArray['###BACK###']         = $this->wrapInTag('<a href="javascript:history.go(-1)"><img src="' . PICTURE_PATH . 'return.png" title="' . $this->getLL('back') . '" alt="[' . $this->getLL('back') . ']" /></a>', 'backLink');
+		$commonsArray['###BACK###']         = $this->wrapInTag($this->pi_linkTP('<img src="' . PICTURE_PATH . 'return.png" title="' . $this->getLL('back') . '" alt="[' . $this->getLL('modify') . ']" />',array(), '1' ,LIST_PID), 'backLink');
 		$commonsArray['###CANCEL###']       = $this->getLL('cancel');
 		$commonsArray['###SUBMIT###']       = $this->getLL('submit');
 		$commonsArray['###YES###']          = $this->getLL('yes');
@@ -1712,7 +1718,7 @@ class tx_generaldatadisplay_pi1 extends tslib_pibase {
 		$categoryList = $datafieldList = t3lib_div::makeInstance(PREFIX_ID . '_categoryList');
 		$categoryList->getDS();
 		
-		$optionArray['###CATEGORY_OPTIONS###'] = '<option value="0">' . $this->getLL('all_categories') . '</option>' . $categoryList->getOptionSelect('category_name', $this->secPiVars->get('selected_category'), TRUE);
+		$optionArray['###CATEGORY_OPTIONS###'] = '<option value="0">' . $this->getLL('all_categories') . '</option>' . $categoryList->getOptionSelect('category_name', $this->secPiVars->get('selected_category'), FALSE, TRUE);
 		$optionArray['###SEARCHPHRASE###']     = $this->secPiVars->get('searchphrase');
 		
 		$optionArray['###FE-ADMINLINKS###'] = $this->wrapInTag($this->makeAdminLinks(), 'optionfield-adminLinks');

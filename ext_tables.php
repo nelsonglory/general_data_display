@@ -50,7 +50,6 @@ $TCA['tx_generaldatadisplay_categories'] = array (
 	),
 );
 
-
 t3lib_extMgm::allowTableOnStandardPages('tx_generaldatadisplay_datafields');
 
 $TCA['tx_generaldatadisplay_datafields'] = array (

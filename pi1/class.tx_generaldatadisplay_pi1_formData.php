@@ -124,13 +124,21 @@ abstract class tx_generaldatadisplay_pi1_formData {
 					break;
 				
 				case 'isInt':
-					$cmpval = $value;
-					settype($cmpval, 'int');
-					$error[$check] = (strcmp($cmpval, $value)) ? $check : 0;
+                    // array support
+                    $values = is_array($value) ? $value : array($value);
+                    foreach($values as $value) {
+                        $cmpval = $value;
+                        settype($cmpval, 'int');
+                        $error[$check] = $error[$check] ? $check : (strcmp($cmpval, $value) ? $check : 0);
+                    }
 					break;
 				
 				case 'isBool':
-					$error[$check] = preg_match('/^(0|1|yes|no)$/', $value) ? 0 : $check;
+                    // array support
+                    $values = is_array($value) ? $value : array($value);
+                    foreach($values as $value) {
+                        $error[$check] = $error[$check] ? $check : (preg_match('/^(0|1|yes|no)$/', $value) ? 0 : $check);
+                    }
 					break;
 				
 				case 'isDate':

@@ -171,11 +171,36 @@ class ext_update
 						}
 					}
 				}
+			
+			// check if old single category style is used
+			if ($this->checkTable('tx_generaldatadisplay_data','data_category')) {
+                // get list of datafield names
+				$dataSet=$GLOBALS['TYPO3_DB']->exec_SELECTquery('*',
+										'tx_generaldatadisplay_data',
+										'1=1'
+										);
+
+				if (!$GLOBALS['TYPO3_DB']->sql_error() && $dataSet) {
+					// Content
+					while ($row=$GLOBALS['TYPO3_DB']->sql_fetch_assoc($dataSet)) {
+						// fill category relation table 
+                        $insertData['pid'] = $row['pid'];
+                        $insertData['tstamp'] = $row['tstamp'];
+                        $insertData['crdate'] = $row['crdate'];
+                        $insertData['cruser_id'] = $row['cruser_id'];
+                        $insertData['deleted'] = $row['deleted'];
+                        $insertData['data_uid'] = $row['uid'];
+                        $insertData['category_uid'] = $row['data_category'];
+                        $GLOBALS['TYPO3_DB']->exec_INSERTquery('tx_generaldatadisplay_categories_mm',$insertData);
+                        $this->dbError();
+                    }
+                }
+			}
 				
 			// now drop all non used table fields silently
 			if (!$this->sqlError)
 				{
-				$obsoleteTableFields = array('tx_generaldatadisplay_data' => array('data_field_content'),
+				$obsoleteTableFields = array('tx_generaldatadisplay_data' => array('data_field_content','data_category'),
 							     'tx_generaldatadisplay_datafields' => array('datafield_searchable','content_visible','datafield_required')
 							    );
 
@@ -240,6 +265,9 @@ class ext_update
 				if (is_file($_SERVER['DOCUMENT_ROOT'].'/uploads/tx_generaldatadisplay/'.$row['pid'].'/'.$row['file'])) return TRUE;
 				}
 			}
+			
+        // check if old single category style is used
+        if ($this->checkTable('tx_generaldatadisplay_data','data_category')) return TRUE;
 			
 		return FALSE;
 		}

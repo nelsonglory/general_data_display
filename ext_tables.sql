@@ -9,7 +9,6 @@ CREATE TABLE tx_generaldatadisplay_data (
 	cruser_id int(11) DEFAULT '0' NOT NULL,
 	deleted tinyint(3) unsigned DEFAULT '0' NOT NULL,
 	data_title tinytext,
-	data_category int(11) DEFAULT '0' NOT NULL,
 	
 	PRIMARY KEY (uid),
 	KEY parent (pid)
@@ -49,6 +48,23 @@ CREATE TABLE tx_generaldatadisplay_categories (
 	deleted tinyint(3) unsigned DEFAULT '0' NOT NULL,
 	category_progenitor int(11) DEFAULT '0' NOT NULL,
 	category_name tinytext,
+
+	PRIMARY KEY (uid),
+	KEY parent (pid)
+);
+
+#
+# Table structure for table 'tx_generaldatadisplay_categories_mm'
+#
+CREATE TABLE tx_generaldatadisplay_categories_mm (
+	uid int(11) NOT NULL auto_increment,
+	pid int(11) DEFAULT '0' NOT NULL,
+	tstamp int(11) DEFAULT '0' NOT NULL,
+	crdate int(11) DEFAULT '0' NOT NULL,
+	cruser_id int(11) DEFAULT '0' NOT NULL,
+	deleted tinyint(3) unsigned DEFAULT '0' NOT NULL,
+	data_uid int(11) DEFAULT '0' NOT NULL,
+	category_uid int(11) DEFAULT '0' NOT NULL,
 
 	PRIMARY KEY (uid),
 	KEY parent (pid)

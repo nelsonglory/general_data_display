@@ -1,8 +1,8 @@
-var tx_generaldatadisplay_pi1 = {
-	input_by_select: function(selectID,inputID){
-        	selectval = document.getElementById(selectID).value;
-		document.getElementById(inputID).value = selectval;
-	},
+    var tx_generaldatadisplay_pi1 = {
+        input_by_select: function(selectID,inputID){
+        selectval = document.getElementById(selectID).value;
+        document.getElementById(inputID).value = selectval;
+    },
 
 	add_option: function(selectID,key,value,is_selected) {
 		var select = document.getElementById(selectID);
@@ -21,15 +21,15 @@ var tx_generaldatadisplay_pi1 = {
 			if (selected) {
 				selected = Number(selected);
 			}
-          		var option = document.createElement('option');
-                	option.setAttribute('value', String(index));
-                	option.innerHTML = String(index);
+            var option = document.createElement('option');
+                option.setAttribute('value', String(index));
+                option.innerHTML = String(index);
 			if (option.value == selected) {
 				match = true;
-                                option.selected = true;
-                        }
-                	select.appendChild(option);
-        	}
+                option.selected = true;
+            }
+            select.appendChild(option);
+        }
 		if (selected && !match) {
 			this.add_option(selectID,selected,selected,true);
 		}

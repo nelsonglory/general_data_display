@@ -1,7 +1,3 @@
-.tx-generaldatadisplay-pi1 select{
-	max-width: 14em;
-}
-	
 .tx-generaldatadisplay-pi1 .backLink {
         margin-top: 1em;
 	margin-bottom:1em;
@@ -83,17 +79,20 @@
 }
 
 .tx-generaldatadisplay-pi1 .singleView-adminstuff img{
-	vertical-align: top;
-	margin-left: 16px;
+	vertical-align: middle;
 	margin-right: 16px;
-	width: 16px;
-	height: 16px;
+	width: 1em;
+	height: 1em;
 }
 
 .tx-generaldatadisplay-pi1 .optionfield-search{
 	background: #E8E8E8;
 	padding: 1em;
 	text-align: center;
+}
+
+.tx-generaldatadisplay-pi1 .optionfield-search select{
+	max-width: 15em;
 }
 
 .tx-generaldatadisplay-pi1 .optionfield-heading {
@@ -263,6 +262,10 @@
 }
 
 /* If you need higher levels of indentation (categorylvl5..n) - you can define it here */
+
+.tx-generaldatadisplay-pi1 .editData select{
+    max-width: 40em;
+}
 
 .tx-generaldatadisplay-pi1 .editView-datafields {
 	border-color: #FFFFFF;

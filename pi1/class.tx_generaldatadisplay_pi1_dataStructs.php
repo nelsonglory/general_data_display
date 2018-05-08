@@ -35,6 +35,7 @@ abstract class tx_generaldatadisplay_pi1_dataStructs {
 	// vars
 	protected $uid;
 	protected $objVars;
+	protected $sqlErrorMsg = '';
 	protected $formError = array();
 	protected $fields = array();
 	protected $commonFields = array('uid' => 1, 'pid' => 1, 'tstamp' => 1, 'crdate' => 1, 'cruser_id' => 1);
@@ -83,47 +84,49 @@ abstract class tx_generaldatadisplay_pi1_dataStructs {
 	
 	protected function cleanContent($key, $value) {
 		$datafieldType = tx_generaldatadisplay_pi1_dataFields::getFieldType($key);
-		
 		// check value is not empty
 		$error = tx_generaldatadisplay_pi1_formData::checkValue($value, 'notEmpty');
 		if ($error['notEmpty'])
 			return '';
 		
-		switch ($datafieldType) {
-			case 'currency':
-				if (is_array($value) && ($value['VALUE_PREFIX'] || $value['VALUE_SUFFIX']))
+		if ($datafieldType) {
+            switch ($datafieldType) {
+                case 'currency':
+                    if (is_array($value) && ($value['VALUE_PREFIX'] || $value['VALUE_SUFFIX']))
 					$content = serialize($value);
-				break;
+                    break;
 			
-			case 'date':
-				if (is_array($value)) {
-					# add zero to single values
-					if (strlen($value['MONTH']) == 1)
-						$value['MONTH'] = '0' . $value['MONTH'];
-					if (strlen($value['DAY']) == 1)
-						$value['DAY'] = '0' . $value['DAY'];
-					$content = serialize($value);
-				}
-				break;
+                case 'date':
+                    if (is_array($value)) {
+                        # add zero to single values
+                        if (strlen($value['MONTH']) == 1)
+                            $value['MONTH'] = '0' . $value['MONTH'];
+                        if (strlen($value['DAY']) == 1)
+                            $value['DAY'] = '0' . $value['DAY'];
+                        $content = serialize($value);
+                    }
+                    break;
 			
-			case 'time':
-				if (is_array($value)) {
-					# add zero to single values
-					if (strlen($value['HOUR']) == 1)
-						$value['HOUR'] = '0' . $value['HOUR'];
-					if (strlen($value['MINUTE']) == 1)
-						$value['MINUTE'] = '0' . $value['MINUTE'];
-					if (strlen($value['SECOND']) == 1)
-						$value['SECOND'] = '0' . $value['SECOND'];
+                case 'time':
+                    if (is_array($value)) {
+                        # add zero to single values
+                        if (strlen($value['HOUR']) == 1)
+                            $value['HOUR'] = '0' . $value['HOUR'];
+                        if (strlen($value['MINUTE']) == 1)
+                            $value['MINUTE'] = '0' . $value['MINUTE'];
+                        if (strlen($value['SECOND']) == 1)
+                            $value['SECOND'] = '0' . $value['SECOND'];
 					
-					$content = serialize($value);
-				}
-				break;
+                        $content = serialize($value);
+                    }
+                    break;
 			
-			default:
-				$content = is_array($value) ? serialize($value) : trim($value);
-		}
-		return $content;
+                default:
+                    $content = is_array($value) ? serialize($value) : trim($value);
+                }
+            return $content;
+        // no type -> just return value as it is
+        } else return $value;
 	}
 	
 	public function newDS() {
@@ -134,6 +137,7 @@ abstract class tx_generaldatadisplay_pi1_dataStructs {
 			$this->setObjVar('cruser_id', $GLOBALS['BE_USER']->user['uid'] ? $GLOBALS['BE_USER']->user['uid'] : $GLOBALS['TSFE']->fe_user->user['uid']);
 			
 			$GLOBALS['TYPO3_DB']->exec_INSERTquery($this->table, $this->cleanedObjVars());
+			$this->setSQLErrorMsg = $GLOBALS['TYPO3_DB']->sql_error();
 			return $GLOBALS['TYPO3_DB']->sql_insert_id();
 		}
 		return FALSE;
@@ -143,7 +147,8 @@ abstract class tx_generaldatadisplay_pi1_dataStructs {
 		if ($this->havePerm()) {
 			$this->setObjVar('tstamp', time());
 			$GLOBALS['TYPO3_DB']->exec_UPDATEquery($this->table, 'uid=' . $this->uid, $this->cleanedObjVars());
-			return TRUE;
+			$this->sqlErrorMsg = $GLOBALS['TYPO3_DB']->sql_error();
+			return $this->sqlError() ? FALSE : TRUE;
 		}
 		return FALSE;
 	}
@@ -153,7 +158,8 @@ abstract class tx_generaldatadisplay_pi1_dataStructs {
 			$GLOBALS['TYPO3_DB']->exec_UPDATEquery($this->table, 'uid=' . $this->uid, array(
 				'deleted' => 1
 			));
-			return TRUE;
+			$this->sqlErrorMsg = $GLOBALS['TYPO3_DB']->sql_error();
+			return $this->sqlError() ? FALSE : TRUE;
 		}
 		return FALSE;
 	}
@@ -190,6 +196,11 @@ abstract class tx_generaldatadisplay_pi1_dataStructs {
 		return FALSE;
 	}
 	
+	public function sqlError() {
+        // return true or false 
+        return $this->sqlErrorMsg ? TRUE : FALSE;
+	}
+	
 	protected function tableExist() {
 		$tableHash = $GLOBALS['TYPO3_DB']->admin_get_tables();
 		return isset($tableHash[$this->table]) ? TRUE : FALSE;
@@ -205,7 +216,7 @@ class tx_generaldatadisplay_pi1_data extends tx_generaldatadisplay_pi1_dataStruc
 	// vars
 	protected $type = "data";
 	protected $table = "tx_generaldatadisplay_data";
-	protected $fields = array('data_title' => 1, 'data_category' => 1);
+	protected $fields = array('data_title' => 1);
 	
 	public function newDS() {
 		// save objVars (TODO sql error handling)
@@ -219,13 +230,28 @@ class tx_generaldatadisplay_pi1_data extends tx_generaldatadisplay_pi1_dataStruc
 			// instantiate datacontent obj
 			$dataContentObj = t3lib_div::makeInstance(PREFIX_ID . '_datacontent');
 			
+			// instantiate category_mm obj
+			$dataCategoriesObj = t3lib_div::makeInstance(PREFIX_ID . '_categories_mm');
+			
+			// add uid 0 (no category) to table if none is given
+			$savedObjVars['data_category'] = is_array($savedObjVars['data_category']) ? $savedObjVars['data_category'] : array(0);
+			
 			// build and insert datasets
 			foreach ($savedObjVars as $name => $value) {
-				if ($datafieldsUid = $dataFieldList->getUidFromDatafield($name)) {
-					$dataContentObj->setObjVar('datafields_uid', $datafieldsUid);
-					$dataContentObj->setObjVar('data_uid', $uid);
-					$dataContentObj->setObjVar('datacontent', $value);
-					$dataContentObj->newDS();
+                // special: multiple categories
+                if ($name == 'data_category') {
+                    foreach($savedObjVars['data_category'] as $category) {
+                        $dataCategoriesObj->setObjVar('data_uid', $uid);
+                        $dataCategoriesObj->setObjVar('category_uid', $category);
+                        $dataCategoriesObj->newDS();
+                    }
+                } else {
+                    if ($datafieldsUid = $dataFieldList->getUidFromDatafield($name)) {
+                        $dataContentObj->setObjVar('datafields_uid', $datafieldsUid);
+                        $dataContentObj->setObjVar('data_uid', $uid);
+                        $dataContentObj->setObjVar('datacontent', $value);
+                        $dataContentObj->newDS();
+                    }
 				}
 			}
 			return TRUE;
@@ -245,26 +271,51 @@ class tx_generaldatadisplay_pi1_data extends tx_generaldatadisplay_pi1_dataStruc
 			// instantiate datacontent obj
 			$dataContentObj = t3lib_div::makeInstance(PREFIX_ID . '_datacontent');
 			
+			// instantiate category_mm obj
+			$dataCategoriesObj = t3lib_div::makeInstance(PREFIX_ID . '_categories_mm');
+			
+            // instantiate and set clauseObj
+            $clauseObj       = t3lib_div::makeInstance(PREFIX_ID . '_objClause');
+			
 			// build and update datasets
 			foreach ($savedObjVars as $name => $value) {
-				if ($datafieldsUid = $dataFieldList->getUidFromDatafield($name)) {
-					// get uid from datacontent
-					$dataContentList = t3lib_div::makeInstance(PREFIX_ID . '_datacontentList');
-					// instantiate and set clauseObj
-					$clauseObj       = t3lib_div::makeInstance(PREFIX_ID . '_objClause');
-					$clauseObj->addAND('data_uid', $this->uid, '=');
-					$clauseObj->addAND('datafields_uid', $datafieldsUid, '=');
-					$objArr = $dataContentList->getDS($clauseObj);
-					// there should be maximum one DS
-					if (count($objArr) <= 1) {
-						$dataContentObj->setObjVar('datafields_uid', $datafieldsUid);
-						$dataContentObj->setObjVar('data_uid', $this->uid);
-						$dataContentObj->setObjVar('datacontent', $value);
-						$dataContentObj->setProperty('uid', key($objArr));
+                // special: multiple categories
+                if ($name == 'data_category') {
+                    // first delete all previous categories
+                    $categories_mmList = t3lib_div::makeInstance(PREFIX_ID . '_categories_mmList');
+                    $clauseObj->reset();
+                    $clauseObj->addAND('data_uid', $this->uid, '=');
+                    $objArr = $categories_mmList->getDS($clauseObj);
+                    foreach($objArr as $key => $obj) {
+                        $dataCategoriesObj->setProperty('uid',$key);
+                        $dataCategoriesObj->deleteDS();
+                    }
+                    // add uid 0 (no category) to table if none is given
+                    $savedObjVars['data_category'] = is_array($savedObjVars['data_category']) ? $savedObjVars['data_category'] : array(0);
+                    // now add new categories
+                    foreach($savedObjVars['data_category'] as $category) {
+                        $dataCategoriesObj->setObjVar('data_uid', $this->uid);
+                        $dataCategoriesObj->setObjVar('category_uid', $category);
+                        $dataCategoriesObj->newDS();
+                    }
+                } else {
+                    if ($datafieldsUid = $dataFieldList->getUidFromDatafield($name)) {
+                        // get uid from datacontent
+                        $dataContentList = t3lib_div::makeInstance(PREFIX_ID . '_datacontentList');
+                        $clauseObj->reset();
+                        $clauseObj->addAND('data_uid', $this->uid, '=');
+                        $clauseObj->addAND('datafields_uid', $datafieldsUid, '=');
+                        $objArr = $dataContentList->getDS($clauseObj);
+                        // there should be maximum one DS
+                        if (count($objArr) <= 1) {
+                            $dataContentObj->setObjVar('datafields_uid', $datafieldsUid);
+                            $dataContentObj->setObjVar('data_uid', $this->uid);
+                            $dataContentObj->setObjVar('datacontent', $value);
+                            $dataContentObj->setProperty('uid', key($objArr));
 						
-						$objArr ? $dataContentObj->updateDS() : $dataContentObj->newDS();
-					} else
-						return FALSE;
+                            $objArr ? $dataContentObj->updateDS() : $dataContentObj->newDS();
+                        }   else return FALSE;
+                    }
 				}
 			}
 			return TRUE;
@@ -274,27 +325,40 @@ class tx_generaldatadisplay_pi1_data extends tx_generaldatadisplay_pi1_dataStruc
 	
 	public function deleteDS() {
 		if ($this->havePerm()) {
-			$dataSet = $GLOBALS['TYPO3_DB']->exec_SELECTquery('uid', 'tx_generaldatadisplay_datacontent', $where = 'uid=' . $this->uid);
-			if ($dataSet) {
-				$GLOBALS['TYPO3_DB']->exec_UPDATEquery("tx_generaldatadisplay_data, tx_generaldatadisplay_datacontent", "tx_generaldatadisplay_data.uid=tx_generaldatadisplay_datacontent.data_uid 
-									AND tx_generaldatadisplay_data.uid=" . $this->uid, array(
-					'tx_generaldatadisplay_data.deleted' => 1,
-					'tx_generaldatadisplay_datacontent.deleted' => 1
-				));
-				
-				$dberror = $GLOBALS['TYPO3_DB']->sql_error();
-				
-			} else
-				parent::deleteDS();
+            $result = TRUE;
+            // instantiate and set clauseObj
+            $clauseObj       = t3lib_div::makeInstance(PREFIX_ID . '_objClause');
+		
+            // instantiate datacontent obj
+			$contentList = t3lib_div::makeInstance(PREFIX_ID . '_datacontentList');
+			
+			// instantiate category_mm obj
+            $categories_mmList = t3lib_div::makeInstance(PREFIX_ID . '_categories_mmList');
+		
+            // delete dataContent
+            $clauseObj->reset();
+            $clauseObj->addAND('data_uid', $this->uid, '=');
+            $objArr = $contentList->getDS($clauseObj);
+            
+            foreach($objArr as $obj) { 
+                $result = $result && $obj->deleteDS();
+            }
+            
+            // delete category mm entry
+            $objArr = $categories_mmList->getDS($clauseObj);
+            foreach($objArr as $obj) {
+                $result = $result && $obj->deleteDS();
+            }
+            // now delete data entry
+            $result = $result && parent::deleteDS();
 			
 			// delete entry from temptable
-			if (!$dberror && 'tx_generaldatadisplay_pi1_datacontent_tempdata::$tempTable'); {
+			if ($result && 'tx_generaldatadisplay_pi1_datacontent_tempdata::$tempTable'); {
 				$tempData = t3lib_div::makeInstance(PREFIX_ID . '_tempdata');
 				$tempData->setProperty("uid", $this->uid);
 				$tempData->deleteDS();
 			}
-			
-			return $dberror ? FALSE : TRUE;
+			return $result;
 		}
 		return FALSE;
 	}
@@ -304,7 +368,7 @@ class tx_generaldatadisplay_pi1_datacontent extends tx_generaldatadisplay_pi1_da
 	// vars
 	protected $type = "datacontent";
 	protected $table = "tx_generaldatadisplay_datacontent";
-	protected $fields = array('data_uid' => 1, 'datafields_uid' => 1, 'datacontent' => 1);
+	protected $fields = array('data_uid' => 1, 'datacontent' => 1, 'datafields_uid' => 1);
 }
 
 class tx_generaldatadisplay_pi1_category extends tx_generaldatadisplay_pi1_dataStructs {
@@ -336,6 +400,13 @@ class tx_generaldatadisplay_pi1_category extends tx_generaldatadisplay_pi1_dataS
 	}
 }
 
+class tx_generaldatadisplay_pi1_categories_mm extends tx_generaldatadisplay_pi1_dataStructs {
+	// vars
+	protected $type = "categories_mm";
+	protected $table = "tx_generaldatadisplay_categories_mm";
+	protected $fields = array('data_uid' => 1, 'category_uid' => 1);
+}
+
 class tx_generaldatadisplay_pi1_datafield extends tx_generaldatadisplay_pi1_dataStructs {
 	// vars
 	protected $type = "datafield";
@@ -352,20 +423,25 @@ class tx_generaldatadisplay_pi1_tempdata extends tx_generaldatadisplay_pi1_dataS
 	
 	public function newDS() {
 		$GLOBALS['TYPO3_DB']->exec_INSERTquery($this->table . DATA_PID, $this->cleanedObjVars(FALSE));
+		$this->sqlErrorMsg = $GLOBALS['TYPO3_DB']->sql_error();
 		return $GLOBALS['TYPO3_DB']->sql_insert_id();
 	}
 	
 	public function deleteDS() {
 		$GLOBALS['TYPO3_DB']->exec_DELETEquery($this->table . DATA_PID, 'uid=' . $this->uid);
+		$this->sqlErrorMsg = $GLOBALS['TYPO3_DB']->sql_error();
+        return $this->sqlError() ? FALSE : TRUE;
 	}
 	
 	public function createTable($createFields) {
 		// create temptable
+		self::$tempTable = FALSE;
 		$GLOBALS['TYPO3_DB']->sql_query("CREATE TEMPORARY TABLE " . $this->table . DATA_PID . " (" . $createFields . ")");
-		if (!$dberror = $GLOBALS['TYPO3_DB']->sql_error()) {
-			self::$tempTable = $dberror ? FALSE : $this->table . DATA_PID;
+		$this->sqlErrorMsg = $GLOBALS['TYPO3_DB']->sql_error();
+		if (!$this->sqlError()) {
+			self::$tempTable = $this->table . DATA_PID;
 		}
-		return $dberror;
+		return $this->sqlError() ? FALSE : TRUE;
 	}
 	
 	public static function tempTableExist() {
